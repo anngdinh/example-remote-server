@@ -1,56 +1,39 @@
 import { Request, Response } from "express";
-import { generateMcpTokens, readPendingAuthorization, saveMcpInstallation, saveRefreshToken, saveTokenExchange } from "../services/auth.js";
-import { McpInstallation } from "../types.js";
-import { logger } from "../../shared/logger.js";
+import { UpstreamProvider, UpstreamUser } from "./types.js";
 
 /**
  * ============================================================================
  * MOCK UPSTREAM IDENTITY PROVIDER - FOR DEMONSTRATION ONLY
  * ============================================================================
  *
- * This file simulates what happens when an OAuth server delegates user
- * authentication to an external identity provider. In production, this would be:
+ * Simulates delegating user authentication to an external IdP without needing
+ * real credentials. It renders a user-picker page; in production you would use
+ * a real provider (Google, GitHub, corporate SSO) instead.
  *
- * - Google OAuth (accounts.google.com)
- * - GitHub OAuth (github.com/login)
- * - Corporate SSO (SAML, LDAP, Active Directory)
- * - Auth0/Okta user database
- *
- * The mock implementation:
- * - Shows a user selection UI
- * - Generates random user IDs for testing
- * - Simulates the redirect flow back to the OAuth server
- *
- * In production, users would see their actual identity provider's login page
- * (Google's login, GitHub's login, corporate SSO portal, etc.)
- *
+ * Always available so demos and the e2e tests work without configuring secrets.
  * ============================================================================
  */
+export class MockProvider implements UpstreamProvider {
+  readonly slug = "mock";
+  readonly displayName = "Mock IdP";
 
-/**
- * Mock authorization endpoint - simulates external IDP login page
- * In production, this would be replaced by redirecting to:
- * - https://accounts.google.com/oauth/authorize (Google)
- * - https://github.com/login/oauth/authorize (GitHub)
- * - https://login.microsoftonline.com (Azure AD)
- * - Your corporate SSO login page
- */
-export async function handleMockUpstreamAuthorize(req: Request, res: Response) {
-  // get the redirect_uri and state from the query params
-  const { redirect_uri, state } = req.query;
+  isConfigured(): boolean {
+    return true;
+  }
 
-  // Set a more permissive CSP for auth pages to allow inline styles and scripts
-  res.setHeader('Content-Security-Policy', [
-    "default-src 'self'",
-    "style-src 'self' 'unsafe-inline'",    // Allow inline styles for auth page styling
-    "script-src 'self' 'unsafe-inline'",   // Allow inline scripts for auth page functionality
-    "object-src 'none'",
-    "frame-ancestors 'none'",
-    "form-action 'self'",
-    "base-uri 'self'"
-  ].join('; '));
+  startAuthorization({ res, state, callbackUri }: { res: Response; state: string; callbackUri: string }): void {
+    // Set a permissive CSP for auth pages to allow inline styles and scripts
+    res.setHeader('Content-Security-Policy', [
+      "default-src 'self'",
+      "style-src 'self' 'unsafe-inline'",
+      "script-src 'self' 'unsafe-inline'",
+      "object-src 'none'",
+      "frame-ancestors 'none'",
+      "form-action 'self'",
+      "base-uri 'self'"
+    ].join('; '));
 
-  res.send(`
+    res.send(`
     <!DOCTYPE html>
     <html lang="en">
       <head>
@@ -63,7 +46,7 @@ export async function handleMockUpstreamAuthorize(req: Request, res: Response) {
             padding: 0;
             box-sizing: border-box;
           }
-          
+
           body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -73,7 +56,7 @@ export async function handleMockUpstreamAuthorize(req: Request, res: Response) {
             justify-content: center;
             padding: 20px;
           }
-          
+
           .auth-container {
             background: white;
             border-radius: 16px;
@@ -83,7 +66,7 @@ export async function handleMockUpstreamAuthorize(req: Request, res: Response) {
             width: 100%;
             text-align: center;
           }
-          
+
           .logo {
             width: 64px;
             height: 64px;
@@ -97,20 +80,20 @@ export async function handleMockUpstreamAuthorize(req: Request, res: Response) {
             font-weight: bold;
             color: white;
           }
-          
+
           h1 {
             color: #1a202c;
             font-size: 28px;
             font-weight: 700;
             margin-bottom: 8px;
           }
-          
+
           .subtitle {
             color: #718096;
             font-size: 16px;
             margin-bottom: 32px;
           }
-          
+
           .user-section {
             background: #f7fafc;
             border-radius: 12px;
@@ -118,14 +101,14 @@ export async function handleMockUpstreamAuthorize(req: Request, res: Response) {
             margin-bottom: 32px;
             border: 2px solid #e2e8f0;
           }
-          
+
           .user-section h3 {
             color: #2d3748;
             font-size: 18px;
             font-weight: 600;
             margin-bottom: 16px;
           }
-          
+
           .user-id-display {
             background: white;
             border: 2px solid #e2e8f0;
@@ -137,13 +120,13 @@ export async function handleMockUpstreamAuthorize(req: Request, res: Response) {
             margin-bottom: 16px;
             word-break: break-all;
           }
-          
+
           .user-actions {
             display: flex;
             gap: 12px;
             flex-wrap: wrap;
           }
-          
+
           .btn {
             flex: 1;
             min-width: 120px;
@@ -159,16 +142,16 @@ export async function handleMockUpstreamAuthorize(req: Request, res: Response) {
             align-items: center;
             justify-content: center;
           }
-          
+
           .btn-secondary {
             background: #e2e8f0;
             color: #4a5568;
           }
-          
+
           .btn-secondary:hover {
             background: #cbd5e0;
           }
-          
+
           .btn-primary {
             background: linear-gradient(135deg, #4299e1, #3182ce);
             color: white;
@@ -177,20 +160,20 @@ export async function handleMockUpstreamAuthorize(req: Request, res: Response) {
             margin-top: 16px;
             width: 100%;
           }
-          
+
           .btn-primary:hover {
             background: linear-gradient(135deg, #3182ce, #2c5282);
             transform: translateY(-1px);
             box-shadow: 0 4px 12px rgba(66, 153, 225, 0.3);
           }
-          
+
           .help-text {
             color: #718096;
             font-size: 14px;
             margin-top: 24px;
             line-height: 1.5;
           }
-          
+
           .help-text strong {
             color: #4a5568;
           }
@@ -201,7 +184,7 @@ export async function handleMockUpstreamAuthorize(req: Request, res: Response) {
           <div class="logo">🔒</div>
           <h1>Upstream Authentication</h1>
           <p class="subtitle">Please verify your identity with the upstream provider</p>
-          
+
           <div class="user-section">
             <h3>Your User Identity</h3>
             <div class="user-id-display" id="userIdDisplay">Loading...</div>
@@ -210,16 +193,16 @@ export async function handleMockUpstreamAuthorize(req: Request, res: Response) {
               <button class="btn btn-secondary" onclick="editUserId()">Edit ID</button>
             </div>
           </div>
-          
+
           <button class="btn btn-primary" onclick="authorize()">
             Complete Authentication
           </button>
-          
+
           <div class="help-text">
             <strong>Testing Multiple Users:</strong> Open this page in different browser windows or incognito tabs to simulate different users. Each will have their own unique User ID and separate MCP sessions.
           </div>
         </div>
-        
+
         <script>
           // Generate UUID v4
           function generateUUID() {
@@ -228,7 +211,7 @@ export async function handleMockUpstreamAuthorize(req: Request, res: Response) {
               return v.toString(16);
             });
           }
-          
+
           // Get or create user ID
           function getUserId() {
             let userId = localStorage.getItem('mcpUserId');
@@ -238,20 +221,20 @@ export async function handleMockUpstreamAuthorize(req: Request, res: Response) {
             }
             return userId;
           }
-          
+
           // Update the display
           function updateDisplay() {
             const userId = getUserId();
             document.getElementById('userIdDisplay').textContent = userId;
           }
-          
+
           // Generate new user ID
           function generateNewUserId() {
             const newId = generateUUID();
             localStorage.setItem('mcpUserId', newId);
             updateDisplay();
           }
-          
+
           // Edit user ID
           function editUserId() {
             const currentId = getUserId();
@@ -261,12 +244,12 @@ export async function handleMockUpstreamAuthorize(req: Request, res: Response) {
               updateDisplay();
             }
           }
-          
+
           // Authorize with current user ID
           function authorize() {
             const userId = getUserId();
             // Handle relative URLs by making them absolute
-            const redirectUri = '${redirect_uri}';
+            const redirectUri = '${callbackUri}';
             const baseUrl = redirectUri.startsWith('http') ? redirectUri : window.location.origin + redirectUri;
             const url = new URL(baseUrl);
             url.searchParams.set('state', '${state}');
@@ -274,109 +257,23 @@ export async function handleMockUpstreamAuthorize(req: Request, res: Response) {
             url.searchParams.set('userId', userId);
             window.location.href = url.toString();
           }
-          
+
           // Initialize on page load
           updateDisplay();
         </script>
       </body>
     </html>
   `);
-}
-
-
-// This is the callback URL that the upstream auth server will redirect to after authorization
-export async function handleMockUpstreamCallback(req: Request, res: Response) {
-  const {
-    // The state returned from the upstream auth server is actually the authorization code
-    state: mcpAuthorizationCode,
-    code: upstreamAuthorizationCode,
-    userId, // User ID from the authorization flow
-  } = req.query;
-
-  logger.debug('Mock upstream IDP callback received', {
-    mcpAuthorizationCode: typeof mcpAuthorizationCode === 'string' ? mcpAuthorizationCode.substring(0, 8) + '...' : mcpAuthorizationCode,
-    upstreamAuthorizationCode: typeof upstreamAuthorizationCode === 'string' ? upstreamAuthorizationCode.substring(0, 8) + '...' : upstreamAuthorizationCode,
-    userId
-  });
-
-  // This is where you'd exchange the upstreamAuthorizationCode for access/refresh tokens
-  // In this case, we're just going to fake it
-  const upstreamTokens = await mockUpstreamTokenExchange(upstreamAuthorizationCode as string);
-
-  // Validate that it's a string
-  if (typeof mcpAuthorizationCode !== "string") {
-    throw new Error("Invalid authorization code");
   }
 
-  const pendingAuth = await readPendingAuthorization(mcpAuthorizationCode);
-  logger.debug('Reading pending authorization', {
-    mcpAuthorizationCode: mcpAuthorizationCode.substring(0, 8) + '...',
-    found: !!pendingAuth
-  });
-
-  if (!pendingAuth) {
-    throw new Error("No matching authorization found");
+  async exchangeCodeForUser({ req, code }: { req: Request; code: string }): Promise<UpstreamUser> {
+    // The mock "exchange" just echoes the code and reads the user id chosen on
+    // the picker page (passed through as a query param on the callback).
+    const userId = (req.query.userId as string) || "anonymous-user";
+    return {
+      userId,
+      upstreamAccessToken: `${code}-exchanged-for-access-token`,
+      upstreamRefreshToken: `${code}-exchanged-for-refresh-token`,
+    };
   }
-
-  logger.debug('Generating MCP tokens');
-  const mcpTokens = generateMcpTokens();
-  logger.debug('MCP tokens generated', {
-    hasAccessToken: !!mcpTokens.access_token,
-    hasRefreshToken: !!mcpTokens.refresh_token
-  });
-
-  const mcpInstallation: McpInstallation = {
-    mockUpstreamInstallation: {
-      mockUpstreamAccessToken: upstreamTokens.access_token,
-      mockUpstreamRefreshToken: upstreamTokens.refresh_token,
-    },
-    mcpTokens,
-    clientId: pendingAuth.clientId,
-    issuedAt: Date.now() / 1000,
-    userId: (userId as string) || 'anonymous-user', // Include user ID from auth flow
-  }
-
-  logger.debug('Saving MCP installation');
-  // Store the upstream authorization data
-  await saveMcpInstallation(mcpTokens.access_token, mcpInstallation);
-  logger.debug('MCP installation saved');
-
-  // Store the refresh token -> access token mapping
-  if (mcpTokens.refresh_token) {
-    logger.debug('Saving refresh token mapping');
-    await saveRefreshToken(mcpTokens.refresh_token, mcpTokens.access_token);
-    logger.debug('Refresh token mapping saved');
-  }
-
-  logger.debug('Saving token exchange data');
-  // Store the token exchange data
-  await saveTokenExchange(mcpAuthorizationCode, {
-    mcpAccessToken: mcpTokens.access_token,
-    alreadyUsed: false,
-  });
-  logger.debug('Token exchange data saved');
-
-  // Redirect back to the original application with the authorization code and state
-  const redirectUrl = pendingAuth.state ?
-    `${pendingAuth.redirectUri}?code=${mcpAuthorizationCode}&state=${pendingAuth.state}` :
-    `${pendingAuth.redirectUri}?code=${mcpAuthorizationCode}`;
-
-  logger.debug('Redirecting to callback', {
-    redirectUrl,
-    hasState: !!pendingAuth.state
-  });
-  res.redirect(redirectUrl);
-  logger.debug('Redirect completed');
-};
-
-function mockUpstreamTokenExchange(
-  authorizationCode: string,
-): Promise<{ access_token: string; refresh_token: string }> {
-  // just return the authorization code with a suffix
-  return new Promise((resolve) => {
-    resolve({
-      access_token: `${authorizationCode}-exchanged-for-access-token`,
-      refresh_token: `${authorizationCode}-exchanged-for-refresh-token`,
-    });
-  });
 }

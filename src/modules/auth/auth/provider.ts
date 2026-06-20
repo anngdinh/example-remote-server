@@ -19,6 +19,7 @@ import {
 } from '../services/auth.js';
 import { InvalidTokenError } from '@modelcontextprotocol/sdk/server/auth/errors.js';
 import { logger } from '../../shared/logger.js';
+import { getConfiguredProviders } from '../upstream/registry.js';
 
 /**
  * Implementation of the OAuthRegisteredClientsStore interface using the existing client registration system
@@ -261,9 +262,11 @@ export class FeatureReferenceAuthProvider implements OAuthServerProvider {
               <p>You'll be redirected to authenticate with the upstream provider. Once verified, you'll be granted access to this MCP server's resources.</p>
             </div>
             
-            <a href="/mock-upstream-idp/authorize?redirect_uri=/mock-upstream-idp/callback&state=${authorizationCode}" class="btn-primary">
-              Continue to Authentication
-            </a>
+            ${getConfiguredProviders().map(p =>
+              `<a href="/upstream/${p.slug}/authorize?state=${authorizationCode}" class="btn-primary" style="margin-bottom: 12px;">
+              Continue with ${p.displayName}
+            </a>`
+            ).join('')}
             
             <div class="branding">
               Model Context Protocol (MCP) Server

@@ -16,7 +16,7 @@ import { fileURLToPath } from 'url';
 import rateLimit from 'express-rate-limit';
 import { mcpAuthRouter } from '@modelcontextprotocol/sdk/server/auth/router.js';
 import { FeatureReferenceAuthProvider } from './auth/provider.js';
-import { handleMockUpstreamAuthorize, handleMockUpstreamCallback } from './handlers/mock-upstream-idp.js';
+import { handleUpstreamAuthorize, handleUpstreamCallback } from './handlers/upstream-idp.js';
 import { TokenIntrospectionResponse } from '../../interfaces/auth-validator.js';
 import { logger } from '../shared/logger.js';
 
@@ -125,9 +125,19 @@ export class AuthModule {
       }
     });
 
-    // Mock upstream IDP endpoints (for demo purposes)
-    router.get('/mock-upstream-idp/authorize', authLimiter, handleMockUpstreamAuthorize);
-    router.get('/mock-upstream-idp/callback', authLimiter, handleMockUpstreamCallback);
+    // Upstream identity provider endpoints (Google, GitHub, mock, ...)
+    router.get('/upstream/:provider/authorize', authLimiter, handleUpstreamAuthorize);
+    router.get('/upstream/:provider/callback', authLimiter, handleUpstreamCallback);
+
+    // Backwards-compatible aliases for the mock provider (used by e2e tests)
+    router.get('/mock-upstream-idp/authorize', authLimiter, (req, res) => {
+      req.params.provider = 'mock';
+      return handleUpstreamAuthorize(req, res);
+    });
+    router.get('/mock-upstream-idp/callback', authLimiter, (req, res) => {
+      req.params.provider = 'mock';
+      return handleUpstreamCallback(req, res);
+    });
 
     // Static assets for auth pages
     router.get('/mcp-logo.png', staticAssetLimiter, (req, res) => {

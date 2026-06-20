@@ -47,6 +47,8 @@ export interface MockUpstreamInstallation {
 export interface McpInstallation {
   /** Information from the upstream authentication provider */
   mockUpstreamInstallation: MockUpstreamInstallation;
+  /** Slug of the upstream provider that authenticated the user (e.g. 'google', 'github', 'mock') */
+  provider?: string;
   /** MCP OAuth tokens issued to the client */
   mcpTokens: OAuthTokens;
   /** The OAuth client ID associated with this installation */

@@ -139,7 +139,7 @@ describe("FeatureReferenceAuthProvider", () => {
       const sentHtml = (res.send as jest.Mock).mock.calls[0][0];
       expect(sentHtml).toContain('MCP Server Authorization');
       expect(sentHtml).toContain('Authorization Required');
-      expect(sentHtml).toContain('mock-upstream-idp/authorize?redirect_uri=/mock-upstream-idp/callback&state=');
+      expect(sentHtml).toContain('/upstream/mock/authorize?state=');
     });
   });
   
