@@ -12,7 +12,9 @@ services:
     runtime: node
     plan: free
     region: oregon
-    buildCommand: npm ci && npm run build
+    # --include=dev is required: NODE_ENV=production (set below) makes npm omit
+    # devDependencies by default, but the build needs typescript/@types/vite etc.
+    buildCommand: npm ci --include=dev && npm run build
     startCommand: npm start
     envVars:
       - key: AUTH_MODE
