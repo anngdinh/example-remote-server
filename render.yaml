@@ -1,0 +1,27 @@
+# Render Blueprint for the MCP Feature Reference Server
+# Deploy: push this file to GitHub, then create a new Blueprint at
+# https://dashboard.render.com/select-repo?type=blueprint
+#
+# Free plan notes:
+# - The service sleeps after 15 minutes of inactivity (cold start ~50s on wake).
+# - Runs a single instance, so the in-memory session store is fine
+#   (no Redis required). Sessions are lost on restart/sleep.
+services:
+  - type: web
+    name: mcp-example-remote-server
+    runtime: node
+    plan: free
+    region: oregon
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    envVars:
+      - key: AUTH_MODE
+        value: internal
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: 22.20.0
+      # BASE_URI is left unset on purpose: config.ts falls back to
+      # RENDER_EXTERNAL_URL (https://<service>.onrender.com), which Render
+      # injects automatically. This keeps OAuth redirects pointing at the
+      # real public URL with no manual step.

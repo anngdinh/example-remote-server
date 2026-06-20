@@ -42,7 +42,7 @@ function loadConfig(): Config {
   return {
     // Server configuration
     port: Number(process.env.PORT) || 3232,
-    baseUri: process.env.BASE_URI || 'http://localhost:3232',
+    baseUri: process.env.BASE_URI || process.env.RENDER_EXTERNAL_URL || 'http://localhost:3232',
     nodeEnv: process.env.NODE_ENV || 'development',
 
     // Auth configuration
