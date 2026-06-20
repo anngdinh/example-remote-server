@@ -93,6 +93,7 @@ enum ToolName {
   GET_RESOURCE_REFERENCE = "getResourceReference",
   ELICIT_INPUTS = "elicitInputs",
   MCP_APPS_HELLO_WORLD = "mcp_apps_hello_world",
+  WHOAMI = "whoami",
 }
 
 // MCP Apps constants
@@ -493,6 +494,12 @@ export const createMcpServer = (): McpServerWrapper => {
         inputSchema: { type: "object", properties: {} },
         _meta: { ui: { resourceUri: HELLO_WORLD_APP_URI } },
       },
+      {
+        name: ToolName.WHOAMI,
+        description:
+          "Returns the authenticated user's identity (userId and upstream provider) from the access token",
+        inputSchema: { type: "object", properties: {} },
+      },
     ];
 
     return { tools };
@@ -779,6 +786,25 @@ export const createMcpServer = (): McpServerWrapper => {
           exampleKey: "exampleValue",
           processed: true,
         },
+      };
+    }
+
+    if (name === ToolName.WHOAMI) {
+      const authInfo = extra.authInfo;
+      if (!authInfo) {
+        throw new Error("No authentication information available");
+      }
+      const { userId, provider } = (authInfo.extra ?? {}) as {
+        userId?: string;
+        provider?: string;
+      };
+      return {
+        content: [
+          {
+            type: "text",
+            text: `You are authenticated as:\n- userId: ${userId ?? "unknown"}\n- provider: ${provider ?? "unknown"}\n- clientId: ${authInfo.clientId}\n- scopes: ${authInfo.scopes.join(", ")}`,
+          },
+        ],
       };
     }
 

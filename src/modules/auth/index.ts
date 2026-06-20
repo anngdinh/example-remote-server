@@ -60,6 +60,7 @@ export class AuthModule {
         scope: authInfo.scopes.join(' '),
         exp: authInfo.expiresAt,
         sub: String(authInfo.extra?.userId || 'unknown'),
+        provider: authInfo.extra?.provider as string | undefined,
         username: authInfo.extra?.username as string | undefined,
         aud: this.config.baseUri,
         iss: this.config.authServerUrl || this.config.baseUri,

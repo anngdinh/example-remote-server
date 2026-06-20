@@ -28,6 +28,8 @@ export interface TokenIntrospectionResponse {
   iss?: string;
   nbf?: number;
   iat?: number;
+  /** Custom field: slug of the upstream IdP that authenticated the user */
+  provider?: string;
 }
 
 /**
@@ -74,6 +76,7 @@ abstract class BaseTokenValidator implements ITokenValidator {
       expiresAt: result.exp,
       extra: {
         userId: result.sub || 'unknown',
+        provider: result.provider,
         audience: result.aud,
         username: result.username,
         issuer: result.iss

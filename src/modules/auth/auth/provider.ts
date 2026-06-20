@@ -370,7 +370,8 @@ export class FeatureReferenceAuthProvider implements OAuthServerProvider {
       scopes: ['mcp'],
       expiresAt,
       extra: {
-        userId: installation.userId
+        userId: installation.userId,
+        provider: installation.provider
       }
     };
   }
