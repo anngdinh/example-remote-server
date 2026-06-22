@@ -371,7 +371,8 @@ export class FeatureReferenceAuthProvider implements OAuthServerProvider {
       expiresAt,
       extra: {
         userId: installation.userId,
-        provider: installation.provider
+        provider: installation.provider,
+        email: installation.email
       }
     };
   }

@@ -61,6 +61,7 @@ export class AuthModule {
         exp: authInfo.expiresAt,
         sub: String(authInfo.extra?.userId || 'unknown'),
         provider: authInfo.extra?.provider as string | undefined,
+        email: authInfo.extra?.email as string | undefined,
         username: authInfo.extra?.username as string | undefined,
         aud: this.config.baseUri,
         iss: this.config.authServerUrl || this.config.baseUri,

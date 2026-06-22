@@ -20,6 +20,7 @@ import { config } from './config.js';
 import { AuthModule } from './modules/auth/index.js';
 import { MCPModule } from './modules/mcp/index.js';
 import { ExampleAppsModule, AVAILABLE_EXAMPLES } from './modules/example-apps/index.js';
+import { MyInfoModule } from './modules/myinfo/index.js';
 import { ExternalTokenValidator, InternalTokenValidator, ITokenValidator } from './interfaces/auth-validator.js';
 import { redisClient } from './modules/shared/redis.js';
 import { logger } from './modules/shared/logger.js';
@@ -171,6 +172,15 @@ async function main() {
     // Mount MCP routes
     app.use('/', mcpModule.getRouter());
 
+    // Mount MyInfo module (authenticated MCP server sharing the same OAuth/token).
+    // Must be mounted before the example apps: its /myinfo/mcp path also matches
+    // the example apps' /:slug/mcp pattern, which would otherwise 404 the slug.
+    const myInfoModule = new MyInfoModule(
+      { baseUri: config.baseUri },
+      tokenValidator
+    );
+    app.use('/', myInfoModule.getRouter());
+
     // Mount Example Apps module (MCP Apps servers at /:slug/mcp)
     const exampleAppsModule = new ExampleAppsModule(
       { baseUri: config.baseUri },
@@ -181,6 +191,7 @@ async function main() {
     console.log('MCP Endpoints:');
     console.log(`   Streamable HTTP: ${config.baseUri}/mcp`);
     console.log(`   SSE (legacy): ${config.baseUri}/sse`);
+    console.log(`   MyInfo: ${config.baseUri}/myinfo/mcp`);
     console.log(`   OAuth Metadata: ${config.baseUri}/.well-known/oauth-authorization-server`);
     console.log('');
     console.log('MCP App Example Servers:');

@@ -6,6 +6,8 @@ import { Request, Response } from "express";
 export interface UpstreamUser {
   /** Stable unique identifier for the user from the upstream provider */
   userId: string;
+  /** Email of the user, if the provider supplies one */
+  email?: string;
   /** Access token issued by the upstream provider */
   upstreamAccessToken: string;
   /** Refresh token issued by the upstream provider (if any) */

@@ -69,6 +69,7 @@ export class GoogleProvider implements UpstreamProvider {
 
     return {
       userId: `google:${userInfo.sub}`,
+      email: userInfo.email,
       upstreamAccessToken: tokens.access_token,
       upstreamRefreshToken: tokens.refresh_token,
     };

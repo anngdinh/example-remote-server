@@ -91,6 +91,7 @@ export async function handleUpstreamCallback(req: Request, res: Response) {
     clientId: pendingAuth.clientId,
     issuedAt: Date.now() / 1000,
     userId: upstreamUser.userId,
+    email: upstreamUser.email,
   };
 
   await saveMcpInstallation(mcpTokens.access_token, mcpInstallation);

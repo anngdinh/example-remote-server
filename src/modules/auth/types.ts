@@ -57,6 +57,8 @@ export interface McpInstallation {
   issuedAt: number;
   /** Unique identifier for the user (not the OAuth client) */
   userId: string;
+  /** Email of the user, if the upstream provider supplied one */
+  email?: string;
 }
 
 /**

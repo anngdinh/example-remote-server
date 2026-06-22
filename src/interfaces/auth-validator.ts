@@ -30,6 +30,8 @@ export interface TokenIntrospectionResponse {
   iat?: number;
   /** Custom field: slug of the upstream IdP that authenticated the user */
   provider?: string;
+  /** Custom field: email of the user, if the upstream IdP supplied one */
+  email?: string;
 }
 
 /**
@@ -77,6 +79,7 @@ abstract class BaseTokenValidator implements ITokenValidator {
       extra: {
         userId: result.sub || 'unknown',
         provider: result.provider,
+        email: result.email,
         audience: result.aud,
         username: result.username,
         issuer: result.iss
